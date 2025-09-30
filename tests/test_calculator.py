@@ -41,3 +41,21 @@ class TestCalculator:
         calc = Calculator()
         assert calc.subtract(5, 0) == 5
         assert calc.subtract(0, 5) == -5
+
+    def test_multiply_positive_numbers(self):
+        """Test multiplication of positive numbers."""
+        calc = Calculator()
+        assert calc.multiply(2, 3) == 6
+        assert calc.multiply(4, 5) == 20
+
+    def test_multiply_negative_numbers(self):
+        """Test multiplication with negative numbers."""
+        calc = Calculator()
+        assert calc.multiply(-2, 3) == -6
+        assert calc.multiply(-2, -3) == 6
+
+    def test_multiply_zero(self):
+        """Test multiplication with zero."""
+        calc = Calculator()
+        assert calc.multiply(5, 0) == 0
+        assert calc.multiply(0, 5) == 0
