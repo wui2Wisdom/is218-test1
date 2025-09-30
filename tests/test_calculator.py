@@ -59,3 +59,22 @@ class TestCalculator:
         calc = Calculator()
         assert calc.multiply(5, 0) == 0
         assert calc.multiply(0, 5) == 0
+
+    def test_divide_positive_numbers(self):
+        """Test division of positive numbers."""
+        calc = Calculator()
+        assert calc.divide(6, 2) == 3
+        assert calc.divide(15, 3) == 5
+
+    def test_divide_negative_numbers(self):
+        """Test division with negative numbers."""
+        calc = Calculator()
+        assert calc.divide(-6, 2) == -3
+        assert calc.divide(-6, -2) == 3
+
+    def test_divide_by_zero_raises_error(self):
+        """Test division by zero raises ZeroDivisionError."""
+        calc = Calculator()
+        import pytest
+        with pytest.raises(ZeroDivisionError):
+            calc.divide(5, 0)
