@@ -1,4 +1,3 @@
-```markdown
 # TinyTools Calculator – In-Class Test (30 min)
 
 ## Scenario
@@ -99,6 +98,3 @@ If any step fails, you lose points for that category.
 
 * Push to GitHub/GitLab and share the repo URL **OR** upload a zip including `.git` history.
 * Your **last commit** must be before the 30-minute deadline.
-
-```
-```
