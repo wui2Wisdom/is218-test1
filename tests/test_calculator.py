@@ -23,3 +23,21 @@ class TestCalculator:
         assert calc.add(0, 5) == 5
         assert calc.add(5, 0) == 5
         assert calc.add(0, 0) == 0
+
+    def test_subtract_positive_numbers(self):
+        """Test subtraction of positive numbers."""
+        calc = Calculator()
+        assert calc.subtract(5, 3) == 2
+        assert calc.subtract(10, 4) == 6
+
+    def test_subtract_negative_result(self):
+        """Test subtraction resulting in negative number."""
+        calc = Calculator()
+        assert calc.subtract(3, 5) == -2
+        assert calc.subtract(0, 10) == -10
+
+    def test_subtract_zero(self):
+        """Test subtraction with zero."""
+        calc = Calculator()
+        assert calc.subtract(5, 0) == 5
+        assert calc.subtract(0, 5) == -5
