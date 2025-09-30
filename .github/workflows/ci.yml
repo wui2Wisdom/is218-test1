@@ -8,7 +8,7 @@ on:
 
 jobs:
   commit-policy:
-    name: Enforce commit prefixes & atomic history
+    name: "📝 GRADE: Git Commit History & Messages"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout (full history)
@@ -32,39 +32,52 @@ jobs:
           fi
           echo "Range: $(cat $GITHUB_OUTPUT)"
 
-      - name: Check commit message prefixes (chore|feature|fix)
+      - name: "✅ GRADE: Commit messages & count (min 8 commits with chore|feature|fix prefixes)"
         env:
           RANGE: ${{ steps.range.outputs.range }}
           MIN_COMMITS: "8"   # change if you want a different minimum
         run: |
           set -e
-          echo "Validating commits in range: $RANGE"
+          echo "🔍 Validating commits in range: $RANGE"
           BAD=0
 
           COMMITS=$(git rev-list --no-merges "$RANGE" || true)
           if [ -z "$COMMITS" ]; then
-            echo "::error::No commits found to validate."
+            echo "::error::❌ No commits found to validate."
             exit 1
           fi
 
           COUNT=$(echo "$COMMITS" | wc -l | tr -d ' ')
+          echo "📊 Found $COUNT commits (minimum required: $MIN_COMMITS)"
+          
           if [ "$COUNT" -lt "$MIN_COMMITS" ]; then
-            echo "::error::Found $COUNT commits; require at least $MIN_COMMITS atomic commits in this push/PR."
+            echo "::error::❌ GRADE FAIL: Found $COUNT commits; require at least $MIN_COMMITS atomic commits."
             BAD=1
+          else
+            echo "✅ GRADE PASS: Commit count requirement met ($COUNT >= $MIN_COMMITS)"
           fi
 
+          echo ""
+          echo "🔍 Checking commit message format..."
           for c in $COMMITS; do
             MSG=$(git log -1 --pretty=%s "$c")
             if ! echo "$MSG" | grep -Eiq '^(chore|feature|fix): '; then
-              echo "::error file=.git/COMMIT_MSG::Commit $c message must start with 'chore: ', 'feature: ', or 'fix: ' — got: $MSG"
+              echo "::error::❌ GRADE FAIL: Commit $c message must start with 'chore: ', 'feature: ', or 'fix: ' — got: $MSG"
               BAD=1
+            else
+              echo "✅ Valid: $MSG"
             fi
           done
+
+          if [ $BAD -eq 0 ]; then
+            echo ""
+            echo "✅ GRADE PASS: All commit messages follow conventional format!"
+          fi
 
           exit $BAD
 
   build-test:
-    name: Lint, test, and 100% coverage
+    name: "🧪 GRADE: Code Quality & Testing"
     runs-on: ubuntu-latest
     needs: commit-policy
     steps:
@@ -84,27 +97,87 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
-      - name: Verify required structure
+      - name: "✅ GRADE: Project structure verification"
         run: |
-          set -e
-          test -f README.md || (echo "::error::Missing README.md" && exit 1)
-          test -f requirements.txt || (echo "::error::Missing requirements.txt" && exit 1)
-          test -d src || (echo "::error::Missing src/ directory" && exit 1)
-          test -d tests || (echo "::error::Missing tests/ directory" && exit 1)
+          echo "🔍 Checking required project structure..."
+          MISSING=0
+          
+          if [ -f README.md ]; then
+            echo "✅ README.md found"
+          else
+            echo "::error::❌ GRADE FAIL: Missing README.md"
+            MISSING=1
+          fi
+          
+          if [ -f requirements.txt ]; then
+            echo "✅ requirements.txt found"
+          else
+            echo "::error::❌ GRADE FAIL: Missing requirements.txt"
+            MISSING=1
+          fi
+          
+          if [ -d src ]; then
+            echo "✅ src/ directory found"
+          else
+            echo "::error::❌ GRADE FAIL: Missing src/ directory"
+            MISSING=1
+          fi
+          
+          if [ -d tests ]; then
+            echo "✅ tests/ directory found"
+          else
+            echo "::error::❌ GRADE FAIL: Missing tests/ directory"
+            MISSING=1
+          fi
+          
+          if [ $MISSING -eq 0 ]; then
+            echo "✅ GRADE PASS: All required structure elements present!"
+          fi
+          
+          exit $MISSING
 
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
           # Ensure critical tools present even if students forget them:
-          pip install pytest pytest-cov coverage pylint
+          pip install pytest pytest-cov pytest-pylint coverage pylint
 
-      - name: Lint (no errors allowed)
-        run: |
-          pylint --errors-only src
-
-      - name: Run tests with coverage (must be 100%)
+      - name: "✅ GRADE: Lint check (pylint --errors-only)"
         env:
           PYTHONPATH: ${{ github.workspace }}/src
         run: |
-          coverage run -m pytest -q
+          echo "🔍 Running pylint on source code..."
+          pylint --errors-only src
+          echo "✅ No linting errors found!"
+
+      - name: "✅ GRADE: Pytest-pylint integration test"
+        env:
+          PYTHONPATH: ${{ github.workspace }}/src
+        run: |
+          echo "🔍 Running pytest with pylint integration..."
+          pytest --pylint src -v
+          echo "✅ Pytest-pylint integration passed!"
+
+      - name: "✅ GRADE: Unit tests execution"
+        env:
+          PYTHONPATH: ${{ github.workspace }}/src
+        run: |
+          echo "🔍 Running unit tests..."
+          pytest tests -v
+          echo "✅ All unit tests passed!"
+
+      - name: "✅ GRADE: Test coverage (must be 100%)"
+        env:
+          PYTHONPATH: ${{ github.workspace }}/src
+        run: |
+          echo "🔍 Checking test coverage..."
+          coverage run -m pytest tests
           coverage report --fail-under=100
+          echo "✅ 100% test coverage achieved!"
+
+      - name: "📊 GRADE: Coverage report summary"
+        env:
+          PYTHONPATH: ${{ github.workspace }}/src
+        run: |
+          echo "📊 Final coverage report:"
+          coverage report
