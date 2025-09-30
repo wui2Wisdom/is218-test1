@@ -27,3 +27,15 @@ class Calculator:
             Difference of a and b
         """
         return a - b
+
+    def multiply(self, a, b):
+        """Multiply two numbers.
+        
+        Args:
+            a: First number
+            b: Second number
+            
+        Returns:
+            Product of a and b
+        """
+        return a * b
