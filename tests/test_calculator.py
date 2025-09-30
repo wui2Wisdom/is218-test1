@@ -1,4 +1,5 @@
 """Tests for the calculator module."""
+import pytest
 from calculator import Calculator
 
 
@@ -75,6 +76,5 @@ class TestCalculator:
     def test_divide_by_zero_raises_error(self):
         """Test division by zero raises ZeroDivisionError."""
         calc = Calculator()
-        import pytest
         with pytest.raises(ZeroDivisionError):
             calc.divide(5, 0)
