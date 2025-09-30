@@ -39,3 +39,20 @@ class Calculator:
             Product of a and b
         """
         return a * b
+
+    def divide(self, a, b):
+        """Divide two numbers.
+        
+        Args:
+            a: First number (dividend)
+            b: Second number (divisor)
+            
+        Returns:
+            Quotient of a and b
+            
+        Raises:
+            ZeroDivisionError: If b is zero
+        """
+        if b == 0:
+            raise ZeroDivisionError("Cannot divide by zero")
+        return a / b
