@@ -15,3 +15,15 @@ class Calculator:
             Sum of a and b
         """
         return a + b
+
+    def subtract(self, a, b):
+        """Subtract two numbers.
+        
+        Args:
+            a: First number
+            b: Second number
+            
+        Returns:
+            Difference of a and b
+        """
+        return a - b
