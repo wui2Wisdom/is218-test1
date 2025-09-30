@@ -63,11 +63,11 @@ pip install -r requirements.txt
 pylint --errors-only src
 
 # Run tests
-pytest -q
-pytest --pylint src -v
+PYTHONPATH=src pytest tests -v
+PYTHONPATH=src pytest --pylint src -v
 
 # Coverage (must be 100%)
-coverage run -m pytest tests
+PYTHONPATH=src coverage run -m pytest tests
 coverage report --fail-under=100
 ````
 

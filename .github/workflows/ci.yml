@@ -16,50 +16,34 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Determine commit range
-        id: range
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            echo "range=${{ github.event.pull_request.base.sha }}..${{ github.sha }}" >> $GITHUB_OUTPUT
-          else
-            if [ -n "${{ github.event.before }}" ] && [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
-              echo "range=${{ github.event.before }}..${{ github.sha }}" >> $GITHUB_OUTPUT
-            else
-              # First push on a branch: compare from root
-              ROOT=$(git rev-list --max-parents=0 HEAD | tail -n 1)
-              echo "range=${ROOT}..HEAD" >> $GITHUB_OUTPUT
-            fi
-          fi
-          echo "Range: $(cat $GITHUB_OUTPUT)"
-
       - name: "✅ GRADE: Commit messages & count (min 8 commits with chore|feature|fix prefixes)"
         env:
-          RANGE: ${{ steps.range.outputs.range }}
           MIN_COMMITS: "8"   # change if you want a different minimum
         run: |
           set -e
-          echo "🔍 Validating commits in range: $RANGE"
+          echo "🔍 Validating all commits in repository history"
           BAD=0
 
-          COMMITS=$(git rev-list --no-merges "$RANGE" || true)
-          if [ -z "$COMMITS" ]; then
-            echo "::error::❌ No commits found to validate."
+          # Count ALL commits in the repository (not just the push range)
+          ALL_COMMITS=$(git rev-list --no-merges HEAD || true)
+          if [ -z "$ALL_COMMITS" ]; then
+            echo "::error::❌ No commits found in repository."
             exit 1
           fi
 
-          COUNT=$(echo "$COMMITS" | wc -l | tr -d ' ')
-          echo "📊 Found $COUNT commits (minimum required: $MIN_COMMITS)"
+          TOTAL_COUNT=$(echo "$ALL_COMMITS" | wc -l | tr -d ' ')
+          echo "📊 Found $TOTAL_COUNT total commits in repository (minimum required: $MIN_COMMITS)"
           
-          if [ "$COUNT" -lt "$MIN_COMMITS" ]; then
-            echo "::error::❌ GRADE FAIL: Found $COUNT commits; require at least $MIN_COMMITS atomic commits."
+          if [ "$TOTAL_COUNT" -lt "$MIN_COMMITS" ]; then
+            echo "::error::❌ GRADE FAIL: Found $TOTAL_COUNT total commits; require at least $MIN_COMMITS commits in repository."
             BAD=1
           else
-            echo "✅ GRADE PASS: Commit count requirement met ($COUNT >= $MIN_COMMITS)"
+            echo "✅ GRADE PASS: Commit count requirement met ($TOTAL_COUNT >= $MIN_COMMITS)"
           fi
 
           echo ""
-          echo "🔍 Checking commit message format..."
-          for c in $COMMITS; do
+          echo "🔍 Checking commit message format for all commits..."
+          for c in $ALL_COMMITS; do
             MSG=$(git log -1 --pretty=%s "$c")
             if ! echo "$MSG" | grep -Eiq '^(chore|feature|fix): '; then
               echo "::error::❌ GRADE FAIL: Commit $c message must start with 'chore: ', 'feature: ', or 'fix: ' — got: $MSG"
