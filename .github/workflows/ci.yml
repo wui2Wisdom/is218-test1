@@ -1,0 +1,110 @@
+name: ci
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+jobs:
+  commit-policy:
+    name: Enforce commit prefixes & atomic history
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (full history)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine commit range
+        id: range
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "range=${{ github.event.pull_request.base.sha }}..${{ github.sha }}" >> $GITHUB_OUTPUT
+          else
+            if [ -n "${{ github.event.before }}" ] && [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
+              echo "range=${{ github.event.before }}..${{ github.sha }}" >> $GITHUB_OUTPUT
+            else
+              # First push on a branch: compare from root
+              ROOT=$(git rev-list --max-parents=0 HEAD | tail -n 1)
+              echo "range=${ROOT}..HEAD" >> $GITHUB_OUTPUT
+            fi
+          fi
+          echo "Range: $(cat $GITHUB_OUTPUT)"
+
+      - name: Check commit message prefixes (chore|feature|fix)
+        env:
+          RANGE: ${{ steps.range.outputs.range }}
+          MIN_COMMITS: "8"   # change if you want a different minimum
+        run: |
+          set -e
+          echo "Validating commits in range: $RANGE"
+          BAD=0
+
+          COMMITS=$(git rev-list --no-merges "$RANGE" || true)
+          if [ -z "$COMMITS" ]; then
+            echo "::error::No commits found to validate."
+            exit 1
+          fi
+
+          COUNT=$(echo "$COMMITS" | wc -l | tr -d ' ')
+          if [ "$COUNT" -lt "$MIN_COMMITS" ]; then
+            echo "::error::Found $COUNT commits; require at least $MIN_COMMITS atomic commits in this push/PR."
+            BAD=1
+          fi
+
+          for c in $COMMITS; do
+            MSG=$(git log -1 --pretty=%s "$c")
+            if ! echo "$MSG" | grep -Eiq '^(chore|feature|fix): '; then
+              echo "::error file=.git/COMMIT_MSG::Commit $c message must start with 'chore: ', 'feature: ', or 'fix: ' — got: $MSG"
+              BAD=1
+            fi
+          done
+
+          exit $BAD
+
+  build-test:
+    name: Lint, test, and 100% coverage
+    runs-on: ubuntu-latest
+    needs: commit-policy
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Verify required structure
+        run: |
+          set -e
+          test -f README.md || (echo "::error::Missing README.md" && exit 1)
+          test -f requirements.txt || (echo "::error::Missing requirements.txt" && exit 1)
+          test -d src || (echo "::error::Missing src/ directory" && exit 1)
+          test -d tests || (echo "::error::Missing tests/ directory" && exit 1)
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          # Ensure critical tools present even if students forget them:
+          pip install pytest pytest-cov coverage pylint
+
+      - name: Lint (no errors allowed)
+        run: |
+          pylint --errors-only src
+
+      - name: Run tests with coverage (must be 100%)
+        env:
+          PYTHONPATH: ${{ github.workspace }}/src
+        run: |
+          coverage run -m pytest -q
+          coverage report --fail-under=100
